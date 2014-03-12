@@ -1,4 +1,8 @@
 *.py[cod]
+*.logfile
+mothur
+AmazonData/
+testnb*
 
 # C extensions
 *.so

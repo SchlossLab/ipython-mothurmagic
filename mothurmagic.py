@@ -4,7 +4,7 @@ import subprocess as sub
 import random
 from IPython.core.magic import (Magics, magics_class, line_magic, cell_magic, line_cell_magic)
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
-from IPython.display import display
+from IPython.display import display_pretty
 
 class mothurMagicError(Exception):
     pass
@@ -46,9 +46,14 @@ class Mothur(Magics):
         except: 
             return "uh oh, something went really wrong."
             
+        with open(logfile, 'r') as log:
+            lines = log.readlines()
+            for idx, line in enumerate(lines):
+                if line.startswith("mothur >") and not line.startswith("mothur > set.logfile"):
+                    for l in lines[idx:]:
+                        print l.strip()
+                    break
         
-        return "Success, check ./%s for details." % logfile
-
 
 
 def load_ipython_extension(ipython):
