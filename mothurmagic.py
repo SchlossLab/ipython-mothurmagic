@@ -47,11 +47,16 @@ class Mothur(Magics):
             return "uh oh, something went really wrong."
             
         with open(logfile, 'r') as log:
+            count = 0
             lines = log.readlines()
             for idx, line in enumerate(lines):
                 if line.startswith("mothur >") and not line.startswith("mothur > set.logfile"):
                     for l in lines[idx:]:
+                        if count > 1000:
+                            return "output exceded 1000 lines. See logfile %s for complete output." % logfile
+                            break
                         print l.strip()
+                        count = count + 1
                     break
         
 
