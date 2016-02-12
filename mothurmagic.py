@@ -1,4 +1,6 @@
 # mothurmagic.py
+from __future__ import print_function
+
 import os
 import subprocess as sub
 import random
@@ -40,12 +42,12 @@ class Mothur(Magics):
                 try:
                     sub.call(['./mothur',  "#%s" % mothurbatch])
                 except OSError as e:
-                    return "Can't open mothur: " + e[1] #"mothur not in path"
+                    return "Can't open mothur: " + e.args[1]  # "mothur not in path"
             else:
                 return "Something went wrong while opening mothur. Here's what I know: " + e 
         except: 
             return "uh oh, something went really wrong."
-            
+
         with open(logfile, 'r') as log:
             count = 0
             lines = log.readlines()
@@ -55,7 +57,7 @@ class Mothur(Magics):
                         if count > 1000:
                             return "output exceded 1000 lines. See logfile %s for complete output." % logfile
                             break
-                        print l.strip()
+                        print(l.strip())
                         count = count + 1
                     break
         
