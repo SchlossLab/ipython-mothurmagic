@@ -73,7 +73,7 @@ class MothurMagic(Magics):
             #TODO differentiate permission error from file does not exist error.
             print('Couldn\'t save mothur_current variables to file: ', e.ars[1])
 
-        _display_output(output)
+        _display_output(self,output)
 
 
 def _parse_input(self):
@@ -143,7 +143,7 @@ def _parse_output(logfile):
     return current_files
 
 
-def _display_output(logfile):
+def _display_output(self, logfile):
     """Print contents of logfile to the notebook.
 
     Arguments:
@@ -153,9 +153,13 @@ def _display_output(logfile):
     with open(logfile, 'r') as log:
         count = 0
         lines = log.readlines()
+        first_command = self.commands[0]
         for idx, line in enumerate(lines):
-            if line.startswith("mothur >") and not line.startswith("mothur > set.logfile"):
+            #if line.startswith("mothur >") and not line.startswith("mothur > set.logfile"):
+            if first_command in line:
                 for l in lines[idx:]:
+                    if 'get.current' in l:
+                        break
                     if count > 1000:
                         return "output exceded 1000 lines. See logfile %s for complete output." % logfile
                         break
