@@ -35,20 +35,20 @@ class MothurMagic(Magics):
         # save notebooks variables so we have access to them
         self.local_ns = self.shell.user_ns.copy()
 
-        # Load _mothur_current from the local_ns if it exists. If it does not exist try loading from file.
+        # Load mothur_current from the local_ns if it exists. If it does not exist try loading from file.
         # If file does not exist assume this is the first time %%mothur has been run in this notebook
         # and create the entry in the local ns.
-        if '_mothur_current' not in self.local_ns:
+        if 'mothur_current' not in self.local_ns:
             try:
                 with open('mothur.current.json', 'r') as in_handle:
-                    _mothur_current = json.load(in_handle)
-                    self.local_ns['_mothur_current'] = _mothur_current
+                    mothur_current = json.load(in_handle)
+                    self.local_ns['mothur_current'] = mothur_current
             except IOError as e:
                 # file doesn't exist or can't be read so create new user_ns entry for current
                 #TODO differentiate permission error from file does not exist error.
-                print('Couldn\'t load _mothur.current variables from file: ', e.args[1])
-                _mothur_current = {}
-                self.local_ns['_mothur_current'] = _mothur_current
+                print('Couldn\'t load mothur_current variables from file: ', e.args[1])
+                mothur_current = {}
+                self.local_ns['mothur_current'] = mothur_current
 
         self.number = line
         #self.code = cell
@@ -60,18 +60,18 @@ class MothurMagic(Magics):
         output = _run_command(mothurbatch)
         output_files = _parse_output(output)
 
-        # update _mothur_current and push to notebook environment
-        self.local_ns['_mothur_current'].update(output_files)
+        # update mothur_current and push to notebook environment
+        self.local_ns['mothur_current'].update(output_files)
         self.shell.user_ns.update(self.local_ns)
 
-        # create/overwrite mothur.current.json with contents of _mothur_current
+        # create/overwrite mothur.current.json with contents of mothur_current
         # from current notebook environment.
         try:
             with open('mothur.current.json', 'w') as out_handle:
-                json.dump(self.shell.user_ns['_mothur_current'], out_handle)
+                json.dump(self.shell.user_ns['mothur_current'], out_handle)
         except IOError as e:
             #TODO differentiate permission error from file does not exist error.
-            print('Couldn\'t save _mothur_current variables to file: ', e.ars[1])
+            print('Couldn\'t save mothur_current variables to file: ', e.ars[1])
 
         _display_output(output)
 
@@ -84,7 +84,7 @@ def _parse_input(self):
     current variables for parsing."""
 
     new_commands = [command for command in self.commands]
-    current_vars = ', '.join(['%s=%s' % (k, v) for k,v in self.local_ns['_mothur_current'].items()])
+    current_vars = ', '.join(['%s=%s' % (k, v) for k,v in self.local_ns['mothur_current'].items()])
     new_commands.insert(0, 'set.current(%s)' % current_vars)
     new_commands.append('get.current()')
     return new_commands
@@ -121,7 +121,7 @@ def _run_command(mothurbatch):
 
 
 def _parse_output(logfile):
-    """Parse mothur logfile to extract output files."""
+    """Parse mothur logfile to extract current files."""
 
     with open(logfile, 'r') as log:
         lines = (line for line in log.readlines())
