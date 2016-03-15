@@ -55,7 +55,7 @@ class MothurMagic(Magics):
 
         self.commands = cell.split("\n")
 
-        commands = _parse_input(self)
+        commands = _parse_input(self.commands, self.local_ns)
         mothurbatch = "; ".join(commands)
         output = _run_command(mothurbatch)
         output_files = _parse_output(output)
@@ -76,16 +76,17 @@ class MothurMagic(Magics):
         _display_output(self,output)
 
 
-def _parse_input(self):
+def _parse_input(commands, namespace):
     """Parse commands and insert current variables form local namespace.
 
     Prepends commands with set.commands to set mothur current varibales with variables from
     local namespace. Appends get.current to end of commands so that output will contain new
     current variables for parsing."""
 
-    new_commands = [command for command in self.commands]
-    current_vars = ', '.join(['%s=%s' % (k, v) for k,v in self.local_ns['mothur_current'].items()])
-    new_commands.insert(0, 'set.current(%s)' % current_vars)
+    new_commands = [command for command in commands]
+    current_vars = ', '.join(['%s=%s' % (k, v) for k,v in namespace['mothur_current'].items()])
+    if 'set.current' not in commands[0]:
+        new_commands.insert(0, 'set.current(%s)' % current_vars)
     new_commands.append('get.current()')
     return new_commands
 
