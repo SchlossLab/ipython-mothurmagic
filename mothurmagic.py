@@ -55,10 +55,10 @@ class MothurMagic(Magics):
 
         #commands = self.code.split("\n")
 
-        commands = parse_input(self)
+        commands = _parse_input(self)
         mothurbatch = "; ".join(commands)
-        output = run_command(mothurbatch)
-        output_files = parse_output(output)
+        output = _run_command(mothurbatch)
+        output_files = _parse_output(output)
 
         # update _mothur_current and push to notebook environment
         self.local_ns['_mothur_current'].update(output_files)
@@ -73,10 +73,10 @@ class MothurMagic(Magics):
             #TODO differentiate permission error from file does not exist error.
             print('Couldn\'t save _mothur_current variables to file: ', e.ars[1])
 
-        display_output(output)
+        _display_output(output)
 
 
-def parse_input(self):
+def _parse_input(self):
     """Parse commands and insert current variables form local namespace.
 
     Prepends commands with set.commands to set mothur current varibales with variables from
@@ -90,7 +90,7 @@ def parse_input(self):
     return new_commands
 
 
-def run_command(mothurbatch):
+def _run_command(mothurbatch):
     """Run mothur using command line mode.
 
     Arguments:
@@ -120,7 +120,7 @@ def run_command(mothurbatch):
     return logfile
 
 
-def parse_output(logfile):
+def _parse_output(logfile):
     """Parse mothur logfile to extract output files."""
 
     with open(logfile, 'r') as log:
@@ -143,7 +143,7 @@ def parse_output(logfile):
     return current_files
 
 
-def display_output(logfile):
+def _display_output(logfile):
     """Print contents of logfile to the notebook.
 
     Arguments:
