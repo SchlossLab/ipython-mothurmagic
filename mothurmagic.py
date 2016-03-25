@@ -4,37 +4,27 @@ import json
 import os
 import subprocess as sub
 import random
-from IPython.core.magic import Magics, magics_class, line_magic, cell_magic, line_cell_magic
+from IPython.core.magic import Magics, magics_class, line_magic, cell_magic, line_cell_magic, Configurable
+try:
+    from traitlets import Bool
+except ImportError:
+    from IPython.utils.traitlets import Bool
 
 
 class MothurMagicError(Exception):
     pass
 
 @magics_class
-class MothurMagic(Magics):
+class MothurMagic(Magics, Configurable):
     """Runs mothur commands from the Jupyter notebook environment.
 
     Provides the %%mothur magic."""
 
+    save_to_file = Bool(False, config=True, help='Save mothur variables to file to enable persistence across notebook sessions.')
 
     def __init__(self, shell):
         Magics.__init__(self, shell=shell)
-
-        # save notebooks variables so we have access to them
-        self.local_ns = self.shell.user_ns.copy()
-
-        try:
-            with open('mothur.variables.json', 'r') as in_handle:
-                mothur_variables = json.load(in_handle)
-                print('Mothur variables loaded from file.')
-        except IOError as e:
-            # file doesn't exist or can't be read so create new user_ns entry for current
-            #TODO differentiate permission error from file does not exist error etc.
-            print('[ERROR] Couldn\'t load mothur_variables variables from file: %s.'
-                  '\nIgnore this warning if this is your first time running this notebook.' % e.args[1])
-            mothur_variables = dict()
-            mothur_variables['current'], mothur_variables['dirs'] = {}, {}
-        self.local_ns['mothur_variables'] = mothur_variables
+        Configurable.__init__(self, config=shell.config)
 
 
     @cell_magic('mothur')
@@ -47,6 +37,29 @@ class MothurMagic(Magics):
             help()
 
         """
+
+        # Save notebooks variables so we have access to them
+        self.local_ns = self.shell.user_ns.copy()
+
+        # If mothur_variables not in local namespace create entry.
+        # If save_to_file is True attempt to load from file before creating new entry.
+        if 'mothur_variables' not in self.local_ns:
+            if self.save_to_file:
+                try:
+                    with open('mothur.variables.json', 'r') as in_handle:
+                        mothur_variables = json.load(in_handle)
+                        print('Mothur variables loaded from file.\n')
+                except IOError as e:
+                    # file doesn't exist or can't be read so create new user_ns entry for current
+                    #TODO differentiate permission error from file does not exist error etc.
+                    print('[ERROR] Couldn\'t load mothur_variables variables from file: %s.'
+                          '\nIgnore this warning if this is your first time running this notebook.' % e.args[1])
+                    mothur_variables = dict()
+                    mothur_variables['current'], mothur_variables['dirs'] = {}, {}
+            else:
+                mothur_variables = dict()
+                mothur_variables['current'], mothur_variables['dirs'] = {}, {}
+            self.local_ns['mothur_variables'] = mothur_variables
 
         self.number = line
         #self.code = cell
@@ -69,13 +82,14 @@ class MothurMagic(Magics):
         #print('logfile: %s' % output)
 
         # overwrite mothur.current.json with contents of mothur_variables from current notebook environment.
-        try:
-            with open('mothur.variables.json', 'w') as out_handle:
-                json.dump(self.shell.user_ns['mothur_variables'], out_handle)
-                print('Mothur variables saved to file.')
-        except IOError as e:
-            #TODO differentiate permission error from file does not exist error.
-            print('[ERROR] Couldn\'t save mothur_variables variables to file: ', e.ars[1])
+        if self.save_to_file:
+            try:
+                with open('mothur.variables.json', 'w') as out_handle:
+                    json.dump(self.shell.user_ns['mothur_variables'], out_handle)
+                    print('Mothur variables saved to file.')
+            except IOError as e:
+                #TODO differentiate permission error from file does not exist error.
+                print('[ERROR] Couldn\'t save mothur_variables variables to file: ', e.ars[1])
 
 
 def _parse_input(commands, namespace):
