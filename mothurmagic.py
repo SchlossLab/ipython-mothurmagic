@@ -65,7 +65,7 @@ class MothurMagic(Magics, Configurable):
         #self.code = cell
         self.commands = cell.split("\n")
 
-        commands = _parse_input(self.commands, self.local_ns)
+        commands = _parse_input(self.commands, self.local_ns['mothur_variables'])
         mothurbatch = '; '.join(commands)
         output = _run_command(mothurbatch)
         output_files, dirs = _parse_output(output)
@@ -92,7 +92,7 @@ class MothurMagic(Magics, Configurable):
                 print('[ERROR] Couldn\'t save mothur_variables variables to file: ', e.ars[1])
 
 
-def _parse_input(commands, namespace):
+def _parse_input(commands, vars):
     """Parse commands and insert current variables form local namespace.
 
     Prepends commands with set.commands and set.dir to set mothur's current variables with variables from
@@ -105,11 +105,12 @@ def _parse_input(commands, namespace):
     """
 
     new_commands = [command for command in commands]
-    current_files = ', '.join(['%s=%s' % (k, v) for k, v in namespace['mothur_variables']['current'].items()])
-    current_dirs = ', '.join(['%s=%s' % (k, v) for k, v in namespace['mothur_variables']['dirs'].items()])
+    current_files = ', '.join(['%s=%s' % (k, v) for k, v in vars['current'].items()])
+    current_dirs = ', '.join(['%s=%s' % (k, v) for k, v in vars['dirs'].items()])
 
     new_commands.insert(0, 'set.current(%s)' % current_files)
-    new_commands.insert(0, 'set.dir(%s)' % current_dirs)
+    if vars['dirs']:
+        new_commands.insert(0, 'set.dir(%s)' % current_dirs)
     new_commands.append('get.current()')
 
     return new_commands
