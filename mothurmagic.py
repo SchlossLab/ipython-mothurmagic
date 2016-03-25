@@ -20,6 +20,21 @@ class MothurMagic(Magics):
     def __init__(self, shell):
         Magics.__init__(self, shell=shell)
 
+        # save notebooks variables so we have access to them
+        self.local_ns = self.shell.user_ns.copy()
+
+        try:
+            with open('mothur.variables.json', 'r') as in_handle:
+                mothur_variables = json.load(in_handle)
+                print('Mothur variables loaded from file.')
+        except IOError as e:
+            # file doesn't exist or can't be read so create new user_ns entry for current
+            #TODO differentiate permission error from file does not exist error etc.
+            print('[ERROR] Couldn\'t load mothur_variables variables from file: %s' % e.args[1])
+            mothur_variables = {}
+            mothur_variables['current'], mothur_variables['dirs'] = {}, {}
+        self.local_ns['mothur_variables'] = mothur_variables
+
 
     @cell_magic('mothur')
     def mothur(self, line, cell):
@@ -32,62 +47,54 @@ class MothurMagic(Magics):
 
         """
 
-        # save notebooks variables so we have access to them
-        self.local_ns = self.shell.user_ns.copy()
-
-        # Load mothur_current from the local_ns if it exists. If it does not exist try loading from file.
-        # If file does not exist assume this is the first time %%mothur has been run in this notebook
-        # and create the entry in the local ns.
-        if 'mothur_current' not in self.local_ns:
-            try:
-                with open('mothur.current.json', 'r') as in_handle:
-                    mothur_current = json.load(in_handle)
-                    self.local_ns['mothur_current'] = mothur_current
-            except IOError as e:
-                # file doesn't exist or can't be read so create new user_ns entry for current
-                #TODO differentiate permission error from file does not exist error.
-                print('Couldn\'t load mothur_current variables from file: ', e.args[1])
-                mothur_current = {}
-                self.local_ns['mothur_current'] = mothur_current
-
         self.number = line
         #self.code = cell
-
         self.commands = cell.split("\n")
 
         commands = _parse_input(self.commands, self.local_ns)
-        mothurbatch = "; ".join(commands)
+        mothurbatch = '; '.join(commands)
         output = _run_command(mothurbatch)
-        output_files = _parse_output(output)
+        output_files, dirs = _parse_output(output)
 
-        # update mothur_current and push to notebook environment
-        self.local_ns['mothur_current'].update(output_files)
+        # update mothur_variables and push to notebook environment
+        if output_files:
+            self.local_ns['mothur_variables']['current'].update(output_files)
+        if dirs:
+            self.local_ns['mothur_variables']['dirs'].update(dirs)
         self.shell.user_ns.update(self.local_ns)
 
-        # create/overwrite mothur.current.json with contents of mothur_current
-        # from current notebook environment.
+        _display_output(self.commands, output)
+
+        # overwrite mothur.current.json with contents of mothur_variables from current notebook environment.
         try:
-            with open('mothur.current.json', 'w') as out_handle:
-                json.dump(self.shell.user_ns['mothur_current'], out_handle)
+            with open('mothur.variables.json', 'w') as out_handle:
+                json.dump(self.shell.user_ns['mothur_variables'], out_handle)
+                print('Mothur variables saved to file.')
         except IOError as e:
             #TODO differentiate permission error from file does not exist error.
-            print('Couldn\'t save mothur_current variables to file: ', e.ars[1])
-
-        _display_output(self.commands,output)
+            print('[ERROR] Couldn\'t save mothur_variables variables to file: ', e.ars[1])
 
 
 def _parse_input(commands, namespace):
     """Parse commands and insert current variables form local namespace.
 
-    Prepends commands with set.commands to set mothur current varibales with variables from
-    local namespace. Appends get.current to end of commands so that output will contain new
-    current variables for parsing."""
+    Prepends commands with set.commands and set.dir to set mothur's current variables with variables from
+    the local namespace. Appends get.current to end of commands so that output will contain new current
+    variables for parsing.
+
+    Arguments:
+        - commands:     list of mothur commands
+        - namespace:    local notebook namespace
+    """
 
     new_commands = [command for command in commands]
-    current_vars = ', '.join(['%s=%s' % (k, v) for k,v in namespace['mothur_current'].items()])
-    if 'set.current' not in commands[0]:
-        new_commands.insert(0, 'set.current(%s)' % current_vars)
+    current_files = ', '.join(['%s=%s' % (k, v) for k, v in namespace['mothur_variables']['current'].items()])
+    current_dirs = ', '.join(['%s=%s' % (k, v) for k, v in namespace['mothur_variables']['dirs'].items()])
+
+    new_commands.insert(0, 'set.current(%s)' % current_files)
+    new_commands.insert(0, 'set.dir(%s)' % current_dirs)
     new_commands.append('get.current()')
+
     return new_commands
 
 
@@ -95,60 +102,75 @@ def _run_command(mothurbatch):
     """Run mothur using command line mode.
 
     Arguments:
-        - mothurbatch: batched mothur commands seperated by ';'
+        - mothurbatch:  batched mothur commands seperated by ';'
 
     Output from mothur is stored in a randomly numbered log file.
     """
 
+    # TODO: check that logfile name does not already exist
     random.seed()
     rn = random.randint(10000,99999)
     logfile = "mothur.ipython.%d.logfile" % rn
     mothur_command = "set.logfile(name=%s); " % logfile + mothurbatch
 
     try:
-        sub.call(['mothur',  "#%s" % mothur_command])
+        sub.call(['mothur',  '#%s' % mothur_command])
     except OSError as e:
         if e.errno == os.errno.ENOENT:
             try:
                 sub.call(['./mothur',  "#%s" % mothur_command])
             except OSError as e:
-                print("Can't open mothur: " + e.args[1])  # "mothur not in path"
+                print('Can\'t open mothur: %s' % e.args[1])  # "mothur not in path"
         else:
-            print("Something went wrong while opening mothur. Here's what I know: " + e)
+            print('Something went wrong while opening mothur. Here\'s what I know: %s' % e)
     except:
-        print("uh oh, something went really wrong.")
+        print('uh oh, something went really wrong.')
 
     return logfile
 
 
-def _parse_output(logfile):
-    """Parse mothur logfile to extract current files."""
+def _parse_output(output):
+    """Parse mothur logfile to extract current files.
 
-    with open(logfile, 'r') as log:
-        lines = (line for line in log.readlines())
+    Arguments:
+        - output:   file name of logfile containg mothur output
+    """
+
+    headers = {'Current input directory saved by mothur:': 'input',
+               'Current output directory saved by mothur:': 'output',
+               'Current default directory saved by mothur:': 'tempdefault'}
+
     current_files = {}
-    for line in lines:
-        if "Current files saved by mothur:" in line:
-            while True:
-                try:
-                    output_file = (next(line for line in lines)).split()
-                    if output_file:
-                        file_type = output_file[0].split('=')[0]
-                        file_name = output_file[0].split('=')[1]
-                        current_files[file_type] = file_name
-                    else:
+    dirs = {}
+    with open(output, 'r') as log:
+        lines = (line for line in log.readlines())
+        for line in lines:
+            if 'Current files saved by mothur:' in line:
+                while True:
+                    try:
+                        output_file = (next(line for line in lines)).split()
+                        if output_file:
+                            file_type = output_file[0].split('=')[0]
+                            file_name = output_file[0].split('=')[1]
+                            current_files[file_type] = file_name
+                        else:
+                            break
+                    except StopIteration:
                         break
-                except StopIteration:
-                    break
+            for k, v in headers.items():
+                if k in line:
+                    mothur_dir = line.split(' ')[-1].split('\n')[0]
+                    dirs[v] = mothur_dir
 
-    return current_files
+    return current_files, dirs
 
 
 def _display_output(commands, logfile):
     """Print contents of logfile to the notebook.
 
     Arguments:
-        - logfile: path of the output log file generated by mothur
+        - commands:   list of mothur commands
+        - logfile:    path of the output log file generated by mothur
     """
 
     with open(logfile, 'r') as log:
@@ -156,13 +178,12 @@ def _display_output(commands, logfile):
         lines = log.readlines()
         first_command = commands[0]
         for idx, line in enumerate(lines):
-            #if line.startswith("mothur >") and not line.startswith("mothur > set.logfile"):
             if first_command in line:
                 for l in lines[idx:]:
                     if 'get.current' in l:
                         break
                     if count > 1000:
-                        return "output exceded 1000 lines. See logfile %s for complete output." % logfile
+                        return 'output exceeded 1000 lines. See logfile %s for complete output.' % logfile
                         break
                     print(l.strip())
                     count = count + 1
