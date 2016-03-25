@@ -30,7 +30,8 @@ class MothurMagic(Magics):
         except IOError as e:
             # file doesn't exist or can't be read so create new user_ns entry for current
             #TODO differentiate permission error from file does not exist error etc.
-            print('[ERROR] Couldn\'t load mothur_variables variables from file: %s' % e.args[1])
+            print('[ERROR] Couldn\'t load mothur_variables variables from file: %s.'
+                  '\nIgnore this warning if this is your first time running this notebook.' % e.args[1])
             mothur_variables = dict()
             mothur_variables['current'], mothur_variables['dirs'] = {}, {}
         self.local_ns['mothur_variables'] = mothur_variables
@@ -64,6 +65,8 @@ class MothurMagic(Magics):
         self.shell.user_ns.update(self.local_ns)
 
         _display_output(self.commands, output)
+
+        #print('logfile: %s' % output)
 
         # overwrite mothur.current.json with contents of mothur_variables from current notebook environment.
         try:
