@@ -3,7 +3,7 @@
 mothur
 AmazonData/
 testnb*
-.ipynb_checkpoints/
+.ipynb_checkpoints
 amazon.*
 mothur.variables.json
 
