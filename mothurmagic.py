@@ -7,7 +7,7 @@ import random
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic, line_cell_magic
 
 
-class mothurMagicError(Exception):
+class MothurMagicError(Exception):
     pass
 
 @magics_class
@@ -31,7 +31,7 @@ class MothurMagic(Magics):
             # file doesn't exist or can't be read so create new user_ns entry for current
             #TODO differentiate permission error from file does not exist error etc.
             print('[ERROR] Couldn\'t load mothur_variables variables from file: %s' % e.args[1])
-            mothur_variables = {}
+            mothur_variables = dict()
             mothur_variables['current'], mothur_variables['dirs'] = {}, {}
         self.local_ns['mothur_variables'] = mothur_variables
 
@@ -102,7 +102,7 @@ def _run_command(mothurbatch):
     """Run mothur using command line mode.
 
     Arguments:
-        - mothurbatch:  batched mothur commands seperated by ';'
+        - mothurbatch:  batched mothur commands separated by ';'
 
     Output from mothur is stored in a randomly numbered log file.
     """
@@ -133,7 +133,7 @@ def _parse_output(output):
     """Parse mothur logfile to extract current files.
 
     Arguments:
-        - output:   file name of logfile containg mothur output
+        - output:   file name of logfile containing mothur output
     """
 
     headers = {'Current input directory saved by mothur:': 'input',
