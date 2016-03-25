@@ -3,6 +3,9 @@
 mothur
 AmazonData/
 testnb*
+.ipynb_checkpoints/
+amazon.*
+mothur.variables.json
 
 # C extensions
 *.so
