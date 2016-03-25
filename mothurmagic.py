@@ -191,27 +191,24 @@ def _display_output(commands, logfile):
     """
 
     with open(logfile, 'r') as log:
-        count = 0
         lines = log.readlines()
+
+        # find first instance of set.current in the logfile
+        start_idx = next(idx for idx, line in enumerate(lines) if ('mothur > %s' % commands[0]) in line)
+
+        # find length of file
+        # TODO: do this more efficiently
+        file_len = len(lines[start_idx:])
 
         # find last instance of get.current in the logfile
         # TODO: do this more efficiently
-        for idx, line in enumerate(lines):
-            if 'get.current' in line:
-                last_idx = idx
+        last_idx = next(idx for idx, line in enumerate(lines[:start_idx:-1]) if 'get.current' in line)
+        output_end = (file_len - last_idx) - 1
 
-        first_command = commands[0]
-        for idx, line in enumerate(lines):
-            if first_command in line:
-                for i, l in enumerate(lines[idx:]):
-                    if i == last_idx-idx:
-                        break
-                    if count > 1000:
-                        return 'output exceeded 1000 lines. See logfile %s for complete output.' % logfile
-                        break
-                    print(l.strip())
-                    count = count + 1
+        for idx, line in enumerate(lines[start_idx:]):
+            if idx > 1000 or idx >= output_end:
                 break
+            print(line.strip())
 
     return
 
