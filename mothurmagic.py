@@ -193,11 +193,18 @@ def _display_output(commands, logfile):
     with open(logfile, 'r') as log:
         count = 0
         lines = log.readlines()
+
+        # find last instance of get.current in the logfile
+        # TODO: do this more efficiently
+        for idx, line in enumerate(lines):
+            if 'get.current' in line:
+                last_idx = idx
+
         first_command = commands[0]
         for idx, line in enumerate(lines):
             if first_command in line:
-                for l in lines[idx:]:
-                    if 'get.current' in l:
+                for i, l in enumerate(lines[idx:]):
+                    if i == last_idx-idx:
                         break
                     if count > 1000:
                         return 'output exceeded 1000 lines. See logfile %s for complete output.' % logfile
