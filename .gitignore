@@ -3,6 +3,9 @@
 mothur
 AmazonData/
 testnb*
+.ipynb_checkpoints
+amazon.*
+mothur.variables.json
 
 # C extensions
 *.so
@@ -38,3 +41,6 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# pyCharm
+.idea
