@@ -92,7 +92,7 @@ class MothurMagic(Magics, Configurable):
                 print('[ERROR] Couldn\'t save mothur_variables variables to file: ', e.ars[1])
 
 
-def _parse_input(commands, vars):
+def _parse_input(commands, mothur_current):
     """Parse commands and insert current variables form local namespace.
 
     Prepends commands with set.commands and set.dir to set mothur's current variables with variables from
@@ -105,11 +105,11 @@ def _parse_input(commands, vars):
     """
 
     new_commands = [command for command in commands]
-    current_files = ', '.join(['%s=%s' % (k, v) for k, v in vars['current'].items()])
-    current_dirs = ', '.join(['%s=%s' % (k, v) for k, v in vars['dirs'].items()])
+    current_files = ', '.join(['%s=%s' % (k, v) for k, v in mothur_current['current'].items()])
+    current_dirs = ', '.join(['%s=%s' % (k, v) for k, v in mothur_current['dirs'].items()])
 
     new_commands.insert(0, 'set.current(%s)' % current_files)
-    if vars['dirs']:
+    if mothur_current['dirs']:
         new_commands.insert(0, 'set.dir(%s)' % current_dirs)
     new_commands.append('get.current()')
 
